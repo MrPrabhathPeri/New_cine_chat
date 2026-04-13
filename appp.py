@@ -81,7 +81,7 @@ def get_poster(movie_id):
             if poster_path:
                 return f"https://image.tmdb.org/t/p/w500{poster_path}"
             else:
-                return "https://via.placeholder.com/300x450?text=No+Poster
+                return "https://via.placeholder.com/300x450?text=No+Poster"
         except requests.exceptions.RequestException as e:
             print(f"[Attempt {attempt + 1}] Failed for ID {movie_id}: {e}")
             time.sleep(0.3)
