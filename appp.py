@@ -63,7 +63,7 @@ def load_resources():
     return client, collection, TMDB_API_KEY  
 
 client, collection, TMDB_API_KEY = load_resources()  
-
+st.write("API KEY:", TMDB_API_KEY)
 
 # ← Entire function replaced with TMDB version
 def get_poster(movie_id):
