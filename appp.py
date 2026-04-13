@@ -3,6 +3,8 @@ import pandas as pd
 import chromadb
 from chromadb.utils import embedding_functions
 import os
+import requests 
+import time
 from groq import Groq
 
 # --------------------------------------------------------------
@@ -20,10 +22,11 @@ st.caption("Powered by Llama 3.3 & RAG")
 def load_resources():
     try:
         GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
-        OMDB_API_KEY = st.secrets["OMDB_API_KEY"]
+        TMDB_API_KEY = st.secrets["TMDB_API_KEY"]  
     except:
-        GROQ_API_KEY = GROQ_API_KEY  # <--- PASTE KEY HERE
-        OMDB_API_KEY = OMDB_API_KEY  # <--- PASTE KEY HERE
+        GROQ_API_KEY = GROQ_API_KEY
+        TMDB_API_KEY = TMDB_API_KEY                
+
     client = Groq(api_key=GROQ_API_KEY)
 
     db_path = "movie_db"
@@ -31,7 +34,6 @@ def load_resources():
     chroma_client = chromadb.PersistentClient(path=db_path)
     collection = chroma_client.get_or_create_collection(name="movies", embedding_function=sentence_transformer_ef)
 
-    # BUILD DB IF EMPTY
     if collection.count() == 0:
         st.info("Building database... (~1 min)")
         if not os.path.exists('tmdb_5000_movies.csv'):
@@ -50,7 +52,7 @@ def load_resources():
 
         ids = [str(i) for i in df['id'].tolist()]
         documents = df['combined_text'].tolist()
-        metadatas = df[['title', 'id']].to_dict(orient='records')
+        metadatas = df[['title', 'id']].to_dict(orient='records') 
 
         batch_size = 200
         for i in range(0, len(df), batch_size):
@@ -58,19 +60,33 @@ def load_resources():
             collection.add(ids=ids[i:end], documents=documents[i:end], metadatas=metadatas[i:end])
         st.success("Database built!")
 
-    return client, collection, OMDB_API_KEY
+    return client, collection, TMDB_API_KEY  
 
-client, collection, OMDB_API_KEY = load_resources()
+client, collection, TMDB_API_KEY = load_resources()  
 
 
+# ← Entire function replaced with TMDB version
+def get_poster(movie_id):
+    for attempt in range(6):
+        try:
+            url = (
+                f"https://api.themoviedb.org/3/movie/{movie_id}"
+                f"?api_key={TMDB_API_KEY}"
+                f"&language=en-US"
+            )
+            response = requests.get(url, timeout=3)
+            response.raise_for_status()
+            data = response.json()
+            poster_path = data.get('poster_path')
+            if poster_path:
+                return f"https://image.tmdb.org/t/p/w500{poster_path}"
+            else:
+                return None
+        except requests.exceptions.RequestException as e:
+            print(f"[Attempt {attempt + 1}] Failed for ID {movie_id}: {e}")
+            time.sleep(0.3)
+    return None
 
-def get_poster(title):
-    try:
-        r = requests.get(f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}").json()
-        url = r.get("Poster", "N/A")
-        return url if url != "N/A" else None
-    except:
-        return None
 
 # --------------------------------------------------------------
 # CHAT INTERFACE
@@ -81,7 +97,6 @@ if "messages" not in st.session_state:
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).write(msg["content"])
 
-# THIS WAS THE BROKEN LINE - I MADE IT SHORTER TO BE SAFE
 if prompt := st.chat_input("Ask for a movie recommendation..."):
     st.chat_message("user").write(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -109,7 +124,7 @@ if prompt := st.chat_input("Ask for a movie recommendation..."):
     st.chat_message("assistant").write(response)
     cols = st.columns(3)
     for i, meta in enumerate(results['metadatas'][0]):
-        poster = get_poster(meta['title'])
+        poster = get_poster(meta['id'])  # ← changed from meta['title'] to meta['id']
         with cols[i]:
             if poster:
                 st.image(poster, caption=meta['title'], use_column_width=True)
