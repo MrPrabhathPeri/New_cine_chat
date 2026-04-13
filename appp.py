@@ -75,15 +75,16 @@ def get_poster(movie_id):
                 f"&language=en-US"
             )
             response = requests.get(url, timeout=3)
+            st.write(f"Status: {response.status_code}, URL: {url}")  # ← add this
             response.raise_for_status()
             data = response.json()
             poster_path = data.get('poster_path')
             if poster_path:
                 return f"https://image.tmdb.org/t/p/w500{poster_path}"
             else:
-                return "https://via.placeholder.com/300x450?text=No+Poster"
+                return None
         except requests.exceptions.RequestException as e:
-            print(f"[Attempt {attempt + 1}] Failed for ID {movie_id}: {e}")
+            st.write(f"Error: {e}") 
             time.sleep(0.3)
     return None
 
