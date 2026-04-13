@@ -124,6 +124,7 @@ if prompt := st.chat_input("Ask for a movie recommendation..."):
     st.chat_message("assistant").write(response)
     cols = st.columns(3)
     for i, meta in enumerate(results['metadatas'][0]):
+        st.write(meta)
         poster = get_poster(meta['id'])  # ← changed from meta['title'] to meta['id']
         with cols[i]:
             if poster:
