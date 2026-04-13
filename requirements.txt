@@ -1,9 +1,0 @@
-streamlit==1.32.2
-chromadb==0.4.24
-protobuf==3.20.3
-opentelemetry-api==1.25.0
-opentelemetry-sdk==1.25.0
-groq
-pandas
-sentence-transformers
-requests
