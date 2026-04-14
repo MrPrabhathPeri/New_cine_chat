@@ -63,7 +63,7 @@ def load_resources():
     return client, collection, TMDB_API_KEY  
 
 client, collection, TMDB_API_KEY = load_resources()  
-st.write("API KEY:", TMDB_API_KEY)
+
 
 # ← Entire function replaced with TMDB version
 def get_poster(movie_id):
@@ -75,7 +75,7 @@ def get_poster(movie_id):
                 f"&language=en-US"
             )
             response = requests.get(url, timeout=3)
-            st.write(f"Status: {response.status_code}, URL: {url}")  # ← add this
+            
             response.raise_for_status()
             data = response.json()
             poster_path = data.get('poster_path')
@@ -84,7 +84,6 @@ def get_poster(movie_id):
             else:
                 return None
         except requests.exceptions.RequestException as e:
-            st.write(f"Error: {e}") 
             time.sleep(0.3)
     return None
 
@@ -125,7 +124,6 @@ if prompt := st.chat_input("Ask for a movie recommendation..."):
     st.chat_message("assistant").write(response)
     cols = st.columns(3)
     for i, meta in enumerate(results['metadatas'][0]):
-        st.write(meta)
         poster = get_poster(meta['id'])  # ← changed from meta['title'] to meta['id']
         with cols[i]:
             if poster:
