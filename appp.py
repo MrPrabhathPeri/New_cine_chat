@@ -65,7 +65,6 @@ def load_resources():
 client, collection, TMDB_API_KEY = load_resources()  
 
 
-# ← Entire function replaced with TMDB version
 def get_poster(movie_id):
     for attempt in range(6):
         try:
@@ -75,7 +74,6 @@ def get_poster(movie_id):
                 f"&language=en-US"
             )
             response = requests.get(url, timeout=3)
-            
             response.raise_for_status()
             data = response.json()
             poster_path = data.get('poster_path')
@@ -93,9 +91,22 @@ def get_poster(movie_id):
 # --------------------------------------------------------------
 if "messages" not in st.session_state:
     st.session_state["messages"] = [{"role": "assistant", "content": "I am a movie expert. Ask me anything!"}]
+    st.session_state["posters"] = []  # ← stores posters for all queries
 
-for msg in st.session_state.messages:
+# Display chat history with posters
+for idx, msg in enumerate(st.session_state.messages):
     st.chat_message(msg["role"]).write(msg["content"])
+    # After each assistant message (skip the first greeting), show its posters
+    if msg["role"] == "assistant" and idx > 0:
+        poster_idx = (idx - 1) // 2
+        if poster_idx < len(st.session_state["posters"]):
+            cols = st.columns(3)
+            for i, p in enumerate(st.session_state["posters"][poster_idx]):
+                with cols[i]:
+                    if p["url"]:
+                        st.image(p["url"], caption=p["title"], use_column_width=True)
+                    else:
+                        st.caption(f"🎬 {p['title']}")
 
 if prompt := st.chat_input("Ask for a movie recommendation..."):
     st.chat_message("user").write(prompt)
@@ -122,13 +133,18 @@ if prompt := st.chat_input("Ask for a movie recommendation..."):
 
     response = chat_completion.choices[0].message.content
     st.chat_message("assistant").write(response)
+
+    # Fetch and display posters for current query
+    poster_data = []
     cols = st.columns(3)
     for i, meta in enumerate(results['metadatas'][0]):
-        poster = get_poster(meta['id'])  # ← changed from meta['title'] to meta['id']
+        poster = get_poster(meta['id'])
+        poster_data.append({"url": poster, "title": meta['title']})
         with cols[i]:
             if poster:
                 st.image(poster, caption=meta['title'], use_column_width=True)
             else:
                 st.caption(f"🎬 {meta['title']}")
 
+    st.session_state["posters"].append(poster_data)  # ← save posters to session state
     st.session_state.messages.append({"role": "assistant", "content": response})
